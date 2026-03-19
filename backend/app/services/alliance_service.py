@@ -1,6 +1,6 @@
 """Alliance service for managing player alliances."""
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
