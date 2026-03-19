@@ -8,13 +8,24 @@ echo           WAR GAME SETUP
 echo ============================================
 echo.
 
-REM Check if Python is available
-python --version >nul 2>&1
-if errorlevel 1 (
+REM Try python first, then python3
+set PYTHON_CMD=
+for %%P in (python python3) do (
+    %%P --version >nul 2>&1
+    if not defined PYTHON_CMD (
+        if !errorlevel! equ 0 (
+            set PYTHON_CMD=%%P
+        )
+    )
+)
+
+if not defined PYTHON_CMD (
     echo ERROR: Python is not installed or not in PATH
     echo Please install Python 3.9+ from https://python.org
     exit /b 1
 )
+
+echo Using Python: %PYTHON_CMD%
 
 REM Check if Node is available
 node --version >nul 2>&1
@@ -45,7 +56,7 @@ echo Running setup script...
 echo.
 
 REM Run the Python setup script
-python setup.py %*
+%PYTHON_CMD% setup.py %*
 
 if errorlevel 1 (
     echo.

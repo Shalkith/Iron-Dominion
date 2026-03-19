@@ -17,12 +17,22 @@ echo "          WAR GAME SETUP"
 echo "============================================"
 echo ""
 
-# Check if Python is available
-if ! command -v python3 &> /dev/null; then
+# Find Python (try python3 first, then python)
+PYTHON_CMD=""
+for cmd in python3 python; do
+    if command -v $cmd &> /dev/null; then
+        PYTHON_CMD=$cmd
+        break
+    fi
+done
+
+if [ -z "$PYTHON_CMD" ]; then
     echo -e "${RED}ERROR: Python is not installed${NC}"
     echo "Please install Python 3.9+ from https://python.org"
     exit 1
 fi
+
+echo -e "${BLUE}Using Python: $PYTHON_CMD${NC}"
 
 # Check if Node is available
 if ! command -v node &> /dev/null; then
@@ -31,8 +41,8 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-echo -e "${BLUE}Prerequisites check passed!${NC}"
+echo -e "${GREEN}Prerequisites check passed!${NC}"
 echo ""
 
 # Run the Python setup script
-python3 setup.py "$@"
+$PYTHON_CMD setup.py "$@"
