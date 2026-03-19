@@ -48,19 +48,19 @@ def print_header(text):
 
 
 def print_step(text):
-    print(f"{Colors.BLUE}➜{Colors.END} {text}")
+    print(f"{Colors.BLUE}>>>{Colors.END} {text}")
 
 
 def print_success(text):
-    print(f"{Colors.GREEN}✓{Colors.END} {text}")
+    print(f"{Colors.GREEN}[OK]{Colors.END} {text}")
 
 
 def print_error(text):
-    print(f"{Colors.FAIL}✗{Colors.END} {text}")
+    print(f"{Colors.FAIL}[ERR]{Colors.END} {text}")
 
 
 def print_warning(text):
-    print(f"{Colors.WARNING}⚠{Colors.END} {text}")
+    print(f"{Colors.WARNING}[!]{Colors.END} {text}")
 
 
 def run_command(cmd, cwd=None, shell=False, check=True):
@@ -368,13 +368,13 @@ def main():
         # Print banner
         print(f"""
 {Colors.CYAN}
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║                    WAR GAME SETUP                            ║
-║                                                              ║
-║        Multiplayer Strategy Game - MVP Edition               ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
+==============================================================
+
+                    WAR GAME SETUP
+
+        Multiplayer Strategy Game - MVP Edition
+
+==============================================================
 {Colors.END}
 """)
 
