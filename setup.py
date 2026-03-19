@@ -87,12 +87,33 @@ def run_command(cmd, cwd=None, shell=False, check=True):
         raise
 
 
+def find_python():
+    """Find the Python executable (python3 or python)."""
+    for cmd in ["python3", "python"]:
+        try:
+            result = subprocess.run([cmd, "--version"], capture_output=True, text=True, check=False)
+            if result.returncode == 0:
+                return cmd
+        except FileNotFoundError:
+            continue
+    return None
+
+
 def check_prerequisites():
     """Check that all required tools are installed."""
     print_header("Checking Prerequisites")
 
+    # Find Python first
+    python_cmd = find_python()
+    if not python_cmd:
+        print_error("Python: Not found (tried 'python3' and 'python')")
+        print("\nPlease install Python 3.9+ from https://python.org")
+        sys.exit(1)
+    else:
+        result = subprocess.run([python_cmd, "--version"], capture_output=True, text=True)
+        print_success(f"Python: {result.stdout.strip() or result.stderr.strip()}")
+
     checks = [
-        ("Python 3.9+", "python", ["--version"]),
         ("Node.js 18+", "node", ["--version"]),
         ("npm", "npm", ["--version"]),
         ("PostgreSQL", "psql", ["--version"]),
@@ -126,10 +147,10 @@ def check_prerequisites():
         print("  - Redis: https://redis.io")
         sys.exit(1)
 
-    return True
+    return python_cmd
 
 
-def setup_backend(skip_db=False):
+def setup_backend(python_cmd="python", skip_db=False):
     """Set up the backend environment."""
     print_header("Setting Up Backend")
 
@@ -139,20 +160,18 @@ def setup_backend(skip_db=False):
         print_warning("Virtual environment already exists, skipping creation")
     else:
         print_step("Creating Python virtual environment...")
-        run_command([sys.executable, "-m", "venv", "venv"], cwd=BACKEND_DIR)
+        run_command([python_cmd, "-m", "venv", "venv"], cwd=BACKEND_DIR)
         print_success("Virtual environment created")
 
-    # Determine pip path based on OS
+    # Determine python path based on OS
     if os.name == 'nt':  # Windows
-        pip_path = venv_path / "Scripts" / "pip.exe"
         python_path = venv_path / "Scripts" / "python.exe"
     else:  # Unix/Mac
-        pip_path = venv_path / "bin" / "pip"
         python_path = venv_path / "bin" / "python"
 
-    # Install dependencies
+    # Install dependencies using python -m pip (more reliable than pip directly)
     print_step("Installing Python dependencies...")
-    run_command([str(pip_path), "install", "-r", "requirements.txt"], cwd=BACKEND_DIR)
+    run_command([str(python_path), "-m", "pip", "install", "-r", "requirements.txt"], cwd=BACKEND_DIR)
     print_success("Dependencies installed")
 
     # Create .env file if it doesn't exist
@@ -380,12 +399,13 @@ def main():
 
         # Check prerequisites
         if not args.skip_checks:
-            check_prerequisites()
+            python_cmd = check_prerequisites()
         else:
             print_warning("Skipping prerequisite checks")
+            python_cmd = find_python() or "python"
 
         # Setup backend
-        python_path = setup_backend(skip_db=args.skip_db)
+        python_path = setup_backend(python_cmd=python_cmd, skip_db=args.skip_db)
 
         # Setup frontend
         setup_frontend()
