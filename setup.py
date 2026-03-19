@@ -189,6 +189,7 @@ def setup_backend(python_cmd="python", skip_db=False):
 
     # Initialize database
     print_step("Initializing database...")
+    db_created = False
     try:
         # Try to create database if it doesn't exist
         result = subprocess.run(
@@ -199,16 +200,37 @@ def setup_backend(python_cmd="python", skip_db=False):
         )
         if result.returncode == 0:
             print_success("Database 'wargame' created")
+            db_created = True
         else:
             if "already exists" in result.stderr.lower():
                 print_warning("Database 'wargame' already exists")
+                db_created = True
+            elif "role" in result.stderr.lower() and "does not exist" in result.stderr.lower():
+                # Try with sudo postgres
+                print_warning(f"Need postgres privileges: {result.stderr.strip()}")
+                print_step("Trying with sudo -u postgres...")
+                result2 = subprocess.run(
+                    ["sudo", "-u", "postgres", "createdb", "wargame"],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
+                if result2.returncode == 0:
+                    print_success("Database 'wargame' created with sudo")
+                    db_created = True
+                else:
+                    print_error(f"Failed: {result2.stderr}")
             else:
                 print_error(f"Could not create database: {result.stderr}")
-                print("Please create the database manually:")
-                print("  createdb wargame")
     except FileNotFoundError:
         print_warning("createdb command not found, skipping database creation")
-        print("Please ensure the database exists manually")
+
+    if not db_created:
+        print("\nPlease create the database manually:")
+        print("  sudo -u postgres createdb wargame")
+        print("Or if postgres user has password:")
+        print("  sudo su - postgres -c 'createdb wargame'")
+        raise RuntimeError("Database creation failed")
 
     # Initialize tables
     print_step("Creating database tables...")
