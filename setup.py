@@ -402,6 +402,7 @@ def start_servers(python_path, prod=False):
 
     # Start frontend
     print_step("Starting frontend server...")
+    is_windows = os.name == 'nt'
     frontend_proc = subprocess.Popen(
         ["npm", "run", "dev"],
         cwd=FRONTEND_DIR,
@@ -410,7 +411,7 @@ def start_servers(python_path, prod=False):
         text=True,
         bufsize=1,
         universal_newlines=True,
-        shell=os.name == 'nt'
+        shell=is_windows
     )
     processes.append(("Frontend", frontend_proc))
     print_success(f"Frontend started on http://localhost:3000")
@@ -424,7 +425,6 @@ def start_servers(python_path, prod=False):
     try:
         import select
         import fcntl
-        import os
 
         # Set non-blocking mode for Unix
         if os.name != 'nt':
