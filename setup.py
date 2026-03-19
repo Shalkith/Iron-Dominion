@@ -177,11 +177,44 @@ def setup_backend(python_cmd="python", skip_db=False):
     # Create .env file if it doesn't exist
     env_file = BACKEND_DIR / ".env"
     env_example = BACKEND_DIR / ".env.example"
-    if not env_file.exists() and env_example.exists():
-        print_step("Creating .env file from template...")
-        shutil.copy(env_example, env_file)
-        print_warning("Please review the .env file and update database credentials if needed")
+    if not env_file.exists():
+        print_step("Creating .env file...")
+
+        # Try to determine the best database URL for this system
+        # Option 1: Try postgres user with sudo (most common on Linux)
+        # Option 2: Try peer/trust auth
+        db_url = "postgresql:///wargame"  # Default: peer auth (no password)
+
+        # Create the .env file with the detected config
+        env_content = f"""# Database
+DATABASE_URL={db_url}
+
+# Redis
+REDIS_URL=redis://localhost:6379/0
+
+# Security
+SECRET_KEY=dev-secret-key-change-in-production
+SESSION_COOKIE_NAME=session_id
+
+# Game Settings
+MAP_SIZE=50
+TICK_INTERVAL=10
+STARTING_GOLD=100
+STARTING_ARMY=10
+ATTACK_COOLDOWN=30
+"""
+        with open(env_file, 'w') as f:
+            f.write(env_content)
+
+        print_success(f".env file created with DATABASE_URL={db_url}")
+        print_warning("If database connection fails, edit the .env file:")
         print(f"  Location: {env_file}")
+        print()
+        print("Common DATABASE_URL formats:")
+        print('  postgresql:///wargame                    # Peer/trust auth (no password)')
+        print('  postgresql://user:pass@localhost/wargame # Password auth')
+        print('  postgresql://postgres:pass@localhost/wargame # Postgres user')
+        print()
 
     if skip_db:
         print_warning("Skipping database initialization")
@@ -232,12 +265,53 @@ def setup_backend(python_cmd="python", skip_db=False):
         print("  sudo su - postgres -c 'createdb wargame'")
         raise RuntimeError("Database creation failed")
 
+    # Test database connection first
+    print_step("Testing database connection...")
+    test_script = """
+import asyncio
+import sys
+import os
+sys.path.insert(0, str(""" + f'"{BACKEND_DIR}"' + """))
+os.chdir(str(""" + f'"{BACKEND_DIR}"' + """))
+from app.config import get_settings
+settings = get_settings()
+print(f"Using DATABASE_URL: {settings.database_url}")
+from app.database import engine
+import asyncio
+async def test():
+    from sqlalchemy import text
+    async with engine.connect() as conn:
+        result = await conn.execute(text("SELECT 1"))
+        print(f"Database connection successful!")
+asyncio.run(test())
+"""
+    try:
+        run_command([str(python_path), "-c", test_script], cwd=BACKEND_DIR)
+    except Exception as e:
+        print_error("Database connection failed!")
+        print()
+        print("Troubleshooting:")
+        print("1. Check PostgreSQL is running:")
+        print("     sudo systemctl status postgresql")
+        print("2. Check the database exists:")
+        print("     sudo -u postgres psql -l")
+        print("3. Edit your .env file with correct DATABASE_URL:")
+        print(f"     nano {env_file}")
+        print()
+        print("Common DATABASE_URL formats:")
+        print('  postgresql:///wargame                    # Peer auth (no password)')
+        print('  postgresql://user:pass@localhost/wargame # Password auth')
+        print('  postgresql://postgres:pass@localhost/wargame # Postgres user with pass')
+        raise
+
     # Initialize tables
     print_step("Creating database tables...")
     init_script = """
 import asyncio
 import sys
+import os
 sys.path.insert(0, str(""" + f'"{BACKEND_DIR}"' + """))
+os.chdir(str(""" + f'"{BACKEND_DIR}"' + """))
 from app.database import init_db
 asyncio.run(init_db())
 print("Database initialized successfully!")
