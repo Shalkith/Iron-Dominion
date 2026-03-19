@@ -1,4 +1,4 @@
-"""TypeScript types for the game."""
+// TypeScript types for the game.
 
 export interface Player {
   id: number;

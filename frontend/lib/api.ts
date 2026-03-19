@@ -1,4 +1,4 @@
-"""API client for the game backend."""
+// API client for the game backend.
 
 const API_BASE = '/api';
 
